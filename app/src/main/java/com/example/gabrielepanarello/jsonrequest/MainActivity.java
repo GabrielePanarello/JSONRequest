@@ -1,17 +1,24 @@
 package com.example.gabrielepanarello.jsonrequest;
 
 import android.app.ProgressDialog;
-import android.support.v7.app.AppCompatActivity;
+import android.content.ContextWrapper;
+import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Bundle;
-import android.util.Log;
-import android.widget.TextView;
+import android.support.v7.app.AppCompatActivity;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageView;
 
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
-import com.android.volley.VolleyLog;
-import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.ImageRequest;
 
-import org.json.JSONObject;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -20,48 +27,92 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        final TextView screen = (TextView) findViewById(R.id.screen);
-        final TextView name = (TextView) findViewById(R.id.name);
-        final TextView os = (TextView) findViewById(R.id.os);
+        final EditText input = (EditText) findViewById(R.id.inputURL);
+        Button send = (Button) findViewById(R.id.ctaInvia);
+        final ImageView result = (ImageView) findViewById(R.id.result);
 
-        final ProgressDialog dialog = new ProgressDialog(MainActivity.this);
-        dialog.setMessage("Loading..");
-        dialog.show();
-
-        /*JsonObjectRequest jsonObjectReq = new JsonObjectRequest("https://androidtutorialpoint.com/api/volleyJsonObject", null,
-                new Response.Listener<JSONObject>() {
-                    @Override
-                    public void onResponse(JSONObject response) {
-                        output.setText(response.toString());
-                        Log.d("SERVICE", "Response: " + response.toString());
-                        dialog.hide();
-                    }
-                }, new Response.ErrorListener() {
+        send.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onErrorResponse(VolleyError error) {
-                VolleyLog.d("VOLLEY", "Error: " + error.getMessage());
-                dialog.hide();
-            }
-        });*/
-        // Access the RequestQueue through your singleton class.
+            public void onClick(View view) {
 
+                final ProgressDialog dialog = new ProgressDialog(MainActivity.this);
+                dialog.setMessage("Loading..");
+                dialog.show();
 
-        GsonRequest jsonObjectReq = new GsonRequest("https://androidtutorialpoint.com/api/volleyJsonObject", DeviceOutput.class, null,
-                new Response.Listener<DeviceOutput>() {
-                    @Override
-                    public void onResponse(DeviceOutput response) {
-                        os.setText(response.getOperatingSystem());
-                        name.setText(response.getName());
-                        screen.setText(response.getScreenSize());
-                        dialog.hide();
-                    }
-                }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                dialog.hide();
+                String imageUrl = String.valueOf(input.getText());
+
+                ImageRequest imageRequest = new ImageRequest(
+                        imageUrl, // Image URL
+                        new Response.Listener<Bitmap>() { // Bitmap listener
+                            @Override
+                            public void onResponse(Bitmap response) {
+                                // Do something with response
+                                //result.setImageBitmap(response);
+
+                                /* Save this downloaded bitmap to internal storage*/
+                                Uri uri = saveImageToInternalStorage(response);
+
+                                // Display the internal storage saved image to image view
+                                result.setImageURI(uri);
+                                dialog.hide();
+                            }
+                        },
+                        600, // Image width
+                        600, // Image height
+                        ImageView.ScaleType.CENTER_CROP, // Image scale type
+                        Bitmap.Config.RGB_565, //Image decode configuration
+                        new Response.ErrorListener() { // Error listener
+                            @Override
+                            public void onErrorResponse(VolleyError error) {
+                                // Do something with error response
+                                error.printStackTrace();
+                            }
+                        });
+
+                ServiceQueueSingleton.getInstance(getApplicationContext()).addToRequestQueue(imageRequest);
             }
         });
 
-        ServiceQueueSingleton.getInstance(this).addToRequestQueue(jsonObjectReq);
+
+    }
+
+    protected Uri saveImageToInternalStorage(Bitmap bitmap) {
+        // Initialize ContextWrapper
+        ContextWrapper wrapper = new ContextWrapper(getApplicationContext());
+
+        // Initializing a new file
+        // The bellow line return a directory in internal storage
+        File file = wrapper.getDir("Images", MODE_PRIVATE);
+
+        // Create a file to save the image
+        file = new File(file, "UniqueFileName" + ".jpg");
+
+        try {
+            // Initialize a new OutputStream
+            OutputStream stream = null;
+
+            // If the output file exists, it can be replaced or appended to it
+            stream = new FileOutputStream(file);
+
+            // Compress the bitmap
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+
+            // Flushes the stream
+            stream.flush();
+
+            // Closes the stream
+            stream.close();
+
+        } catch (IOException e) // Catch the exception
+        {
+            e.printStackTrace();
+        }
+
+        // Parse the gallery image url to uri
+        Uri savedImageURI = Uri.parse(file.getAbsolutePath());
+
+        // Return the saved image Uri
+        return savedImageURI;
     }
 }
+
