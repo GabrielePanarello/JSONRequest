@@ -44,24 +44,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-
-        /*GsonRequest jsonObjectReq = new GsonRequest("https://androidtutorialpoint.com/api/volleyJsonObject", DeviceOutput.class, null,
-                new Response.Listener<DeviceOutput>() {
-                    @Override
-                    public void onResponse(DeviceOutput response) {
-                        os.setText(response.getOperatingSystem());
-                        name.setText(response.getName());
-                        screen.setText(response.getScreenSize());
-                        dialog.hide();
-                    }
-                }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                dialog.hide();
-            }
-        });*/
-
-
         ServiceQueueSingleton.getInstance(getApplicationContext()).addToRequestQueue(jsonObjectReq);
     }
 
